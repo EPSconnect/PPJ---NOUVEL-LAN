@@ -79,7 +79,25 @@ const existing=(last,first,cls,n)=>get().harvests.some(h=>studentKey(h.last,h.fi
 function hideAll(){document.body.classList.remove('studentMode','adminMode');$('platformGate').classList.add('gateHidden');$('landing').classList.add('hidden');$('studentStart').classList.add('hidden');$('adminPanel').style.display='none';$('appGame').style.display='none';}
 function gate(){hideAll();$('platformGate').classList.remove('gateHidden');$('gatePassword').value='';$('gateUser').value='';$('gateError').textContent='';$('gateSchool').value=school;window.scrollTo(0,0)}
 function studentHome(){hideAll();$('studentStart').classList.remove('hidden');$('studentLast').value='';$('studentFirst').value='';$('studentClass').value='';$('studentError').textContent='';$('sessionGateMessage').textContent='Choisis ta classe pour vérifier si une récolte est ouverte.'; $('startStudent').disabled=true;window.scrollTo(0,0)}
-function updateGate(){const c=$('studentClass').value;const ses=get().sessions[c];const msg=$('sessionGateMessage');if(!ses){msg.textContent='Sélectionne ta classe pour vérifier l’ouverture de la session.';$('startStudent').disabled=true;return}const done=existing($('studentLast').value,$('studentFirst').value,c,ses.number);msg.textContent=!ses.open?'🔒 La récolte de '+c+' est fermée. Attends que ton adulte référent l’ouvre.':done?'✅ Tu as déjà réalisé la récolte n° '+ses.number+'. Une seule participation est autorisée.':'🟢 Récolte n° '+ses.number+' ouverte pour '+c+'. Tu peux commencer.';$('startStudent').disabled=!ses.open||done;}
+let neGateRequest=0;
+async function updateGate(){
+ const request=++neGateRequest,c=$('studentClass').value,msg=$('sessionGateMessage');
+ $('startStudent').disabled=true;
+ if(!c){msg.textContent='Sélectionne ta classe pour vérifier l’ouverture de la session.';return}
+ msg.textContent='🔄 Vérification de la session sur le serveur…';
+ try{
+  const result=await window.NouvelElanSync.sessionStatus(school,c);
+  if(request!==neGateRequest||c!==$('studentClass').value)return;
+  const ses=get().sessions[c];ses.number=result.session_number;ses.open=result.is_open;
+  const done=existing($('studentLast').value,$('studentFirst').value,c,ses.number);
+  msg.textContent=!ses.open?'🔒 La récolte de '+c+' est fermée sur le serveur.':done?'✅ Une récolte est déjà enregistrée sur cet appareil pour la session n° '+ses.number+'.':'🟢 Session n° '+ses.number+' ouverte sur le serveur. ⚠️ Les réponses restent enregistrées uniquement sur cet appareil pour le moment.';
+  $('startStudent').disabled=!ses.open||done;
+ }catch(error){
+  if(request!==neGateRequest)return;
+  msg.textContent='⚠️ Impossible de vérifier la session sur le serveur. Réessaie en changeant de classe. '+error.message;
+  $('startStudent').disabled=true;
+ }
+}
 $('studentClass').addEventListener('change',updateGate);$('studentLast').addEventListener('input',updateGate);$('studentFirst').addEventListener('input',updateGate);
 $('gateStudent').onclick=()=>{role='student';superMode=false;$('gateStudent').setAttribute('aria-pressed','true');$('gateAdult').setAttribute('aria-pressed','false');$('gateLogin').classList.remove('hidden');$('gateUserLabel').classList.remove('hidden');$('gateUserLabel').firstChild.textContent='Identifiant de l’établissement';$('gateError').textContent='';};
 $('gateAdult').onclick=()=>{role='adult';superMode=false;$('gateAdult').setAttribute('aria-pressed','true');$('gateStudent').setAttribute('aria-pressed','false');$('gateLogin').classList.remove('hidden');$('gateUserLabel').classList.add('hidden');$('gateError').textContent='';};
