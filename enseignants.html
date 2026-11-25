@@ -4,7 +4,15 @@ $("connect").onclick=async()=>{const btn=$("connect");btn.disabled=true;status("
 async function refresh(){const x=await window.NouvelElanSync.sessionStatus(activeSchool,$("cls").value);$("output").textContent="Classe : "+x.class_name+"\nRécolte n° "+x.session_number+"\nSession : "+(x.is_open?"ouverte":"fermée");}
 $("refresh").onclick=async()=>{try{requireToken();await refresh();status("État actualisé.");}catch(e){status(e.message)}};
 document.querySelectorAll("[data-action]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{await window.NouvelElanSync.teacherSession(activeSchool,$("cls").value,b.dataset.action,requireToken());await refresh();status("Modification enregistrée sur le serveur.");}catch(e){status(e.message)}finally{b.disabled=false}});
-$("reports").onclick=async()=>{try{const data=await window.NouvelElanSync.teacherReports(activeSchool,$("cls").value,requireToken());$("output").textContent="Bilans enregistrés : "+data.harvests.length+"\n"+data.harvests.map(h=>h.student_last+" "+h.student_first+" — récolte n° "+h.session_number+" ("+new Date(h.created_at).toLocaleDateString("fr-FR")+")").join("\n");status("Bilans chargés. Les réponses détaillées restent réservées au futur affichage protégé.");}catch(e){status(e.message)}};
+$("reports").onclick=async()=>{try{
+ const data=await window.NouvelElanSync.teacherReports(activeSchool,$("cls").value,requireToken());
+ $("output").textContent="Bilans synchronisés : "+data.harvests.length+"\n\n"+data.harvests.map(h=>{
+  const chosen=(h.selected||[]).map(x=>" • "+x.text+" ("+x.family+")").join("\n");
+  const expression=Object.entries(h.expressions||{}).map(([k,v])=>k+" : "+String(v)).join("\n");
+  return h.student_last+" "+h.student_first+" — Récolte n° "+h.session_number+" — "+new Date(h.created_at).toLocaleString("fr-FR")+"\nPhrases sélectionnées :\n"+(chosen||"Aucune")+"\nExpressions :\n"+(expression||"Aucune");
+ }).join("\n\n------------------------\n\n");
+ status("Bilans détaillés chargés depuis Supabase.");
+}catch(e){status(e.message)}};
 $("logout").onclick=logout;$("cls").onchange=()=>{if(token)$("refresh").click()};
 })();
 </script></body></html>
