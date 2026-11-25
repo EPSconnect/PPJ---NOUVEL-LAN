@@ -39,6 +39,10 @@
         body: { school, class_name: cls, action }
       });
     },
+    async studentSubmit(payload) {
+      check(payload.school, payload.class_name);
+      return call("/ne-student-submit", { method: "POST", body: payload });
+    },
     async teacherReports(school, cls, teacherJwt) {
       check(school, cls);
       if (!teacherJwt) throw new Error("Connexion adulte sécurisée requise");
